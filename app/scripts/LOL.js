@@ -18,7 +18,7 @@ class LOL {
       window.DEVMODE = true;
     }
     if (parsed.query.vip) {
-      window.VIPMODE = true;
+      window.VIP = true;
     }
   }
   konami() {

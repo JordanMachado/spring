@@ -50,7 +50,7 @@ function touchMove(e) {
 }
 
 domReady(() => {
-  if (!window.VIPMODE) return;
+  if (!window.VIPMODE && !window.DEBUG) return;
   device = deviceType(navigator.userAgent);
   document.querySelector('html').classList.add(device);
 
