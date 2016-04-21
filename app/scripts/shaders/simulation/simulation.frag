@@ -9,6 +9,7 @@ uniform vec3 mouse;
 uniform float timer;
 uniform float restLength;
 uniform float k;
+uniform float distanceAtract;
 
 
 
@@ -31,7 +32,7 @@ void main() {
       vec3 current = porigin.xyz - buffer.xyz;
 
       //
-      if(distance(mouse, porigin.xyz)<10.0) {
+      if(distance(mouse, porigin.xyz)<distanceAtract) {
         to = vec3( mouse.x - porigin.x,mouse.y - porigin.y,mouse.z - porigin.z  ) * 0.1;
         new = buffer.xyz + to;
 

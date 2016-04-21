@@ -6,8 +6,10 @@ import WAGNER from '@superguigui/wagner';
 const FXAAPass = require('@superguigui/wagner/src/passes/fxaa/FXAAPASS');
 const VignettePass = require('@superguigui/wagner/src/passes/vignette/VignettePass');
 const NoisePass = require('@superguigui/wagner/src/passes/noise/noise');
+const LutPass = require('@superguigui/wagner/src/passes/lookup/lookup');
 
 // Objects
+import Plane from './objects/Plane';
 import ParticleSystem from './objects/ParticleSystem';
 
 export default class WebGL {
@@ -35,7 +37,8 @@ export default class WebGL {
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(params.size.width, params.size.height);
-    this.renderer.setClearColor(0xeeeeee);
+    // this.renderer.setClearColor(0xeeeeee);
+    this.renderer.setClearColor(0x472ed3);
 
 
     this.composer = null;
@@ -57,11 +60,21 @@ export default class WebGL {
     // Passes
     this.fxaaPass = new FXAAPass();
     this.vignettePass = new VignettePass({});
-    this.vignettePass.params.boost = 1;
-    this.vignettePass.params.reduction = 0.7;
+
+    this.vignettePass.params.boost = 1.12;
+    this.vignettePass.params.reduction = 0.9;
+
     this.noisePass = new NoisePass({});
     this.noisePass.params.speed = 0.4;
-    this.noisePass.params.amount = 0.1;
+    this.noisePass.params.amount = 0.10;
+
+    this.lutPass = new LutPass({});
+    this.lutPass.params.uLookup = new THREE.Texture();
+    const loader = new THREE.TextureLoader();
+    loader.load('./build/assets/lut.jpg', (texture) => {
+          texture.minFilter = texture.magFilter = THREE.LinearFilter;
+          this.lutPass.params.uLookup = texture;
+    });
 
     let postprossfolder = this.folder.addFolder('postprocessing');
     postprossfolder.add(  this.vignettePass.params, 'boost');
@@ -83,16 +96,18 @@ export default class WebGL {
     let geo = new THREE.SphereGeometry(10, 4, 4);
     let mat = new THREE.MeshBasicMaterial({
       wireframe: true,
-      wireframeLineWidth: 4,
-      color: 0x0000FF,
+      wireframeLineWidth: 40,
+      color: 0x303030,
     });
     this.sphere = new THREE.Mesh(geo,mat)
 
     this.sphere.scale.set(0.2, 0.2, 0.2)
     this.scene.add(this.sphere);
+    this.plane  = new  Plane();
+    // this.scene.add(this.plane);
+
 
     this.particleSystem = new ParticleSystem(this.renderer);
-
     this.scene.add(this.particleSystem);
   }
   initGUI() {
@@ -120,6 +135,8 @@ export default class WebGL {
       this.composer.pass(this.fxaaPass);
       this.composer.pass(this.vignettePass);
       this.composer.pass(this.noisePass);
+      this.composer.pass(this.lutPass);
+
       this.composer.toScreen();
 
     } else {
@@ -130,7 +147,7 @@ export default class WebGL {
     this.sphere.position.x += (this.mouseWorldPosition.x- this.sphere.position.x  )* damping;
     this.sphere.position.y += ( this.mouseWorldPosition.y -this.sphere.position.y )* damping;
 
-
+    this.plane.update();
     this.particleSystem.update(this.sphere.position);
 
   }

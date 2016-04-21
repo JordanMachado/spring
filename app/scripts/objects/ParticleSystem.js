@@ -7,13 +7,14 @@ export default class ParticleSystem extends THREE.Object3D {
     constructor(renderer) {
         super();
 
-        let width = 16;
-        let height = 16;
+        let width = 24;
+        let height = 24;
         this.data = new Float32Array(width * height * 4);
         this.addParticleDiv();
 
 
-        let geo = new THREE.SphereGeometry(10, 36, 36);
+        // let geo = new THREE.SphereGeometry(10, 36, 36);
+        let geo = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
         // let geo = new THREE.CubeGeometry(10, 36, 36);
 
 
@@ -56,8 +57,8 @@ export default class ParticleSystem extends THREE.Object3D {
 
 
         this.rtTexturePos = new THREE.WebGLRenderTarget(width, height, {
-            wrapS: THREE.RepeatWrapping,
-            wrapT: THREE.RepeatWrapping,
+            wrapS: THREE.ClampToEdgeWrapping,
+            wrapT: THREE.ClampToEdgeWrapping,
             minFilter: THREE.NearestFilter,
             magFilter: THREE.NearestFilter,
             format: THREE.RGBAFormat,
@@ -86,6 +87,10 @@ export default class ParticleSystem extends THREE.Object3D {
                 k: {
                     type: "f",
                     value: 0.92
+                },
+                distanceAtract: {
+                    type: "f",
+                    value: 10
                 },
                 mouse: {
                     type: "v3",
@@ -147,7 +152,8 @@ export default class ParticleSystem extends THREE.Object3D {
             wireframeLineWidth:10
         });
         //
-        this.system = new THREE.Line(this.geom, this.mat);
+        // this.system = new THREE.Line(this.geom, this.mat);
+        this.system = new THREE.Mesh(this.geom, this.mat);
         // this.system = new THREE.Points(this.geom, this.mat);
         this.add(this.system);
 
@@ -169,7 +175,8 @@ export default class ParticleSystem extends THREE.Object3D {
     addGUI(folder) {
       this.folder = folder.addFolder('particles');
       this.folder.add(this.simulationShader.uniforms.restLength,'value').min(1).max(100)
-      this.folder.add(this.simulationShader.uniforms.k,'value').min(0.80).max(1)
+      this.folder.add(this.simulationShader.uniforms.k,'value').min(0.10).max(1)
+      this.folder.add(this.simulationShader.uniforms.distanceAtract,'value').min(5).max(50)
       this.folder.open();
     }
     update(mouse) {
