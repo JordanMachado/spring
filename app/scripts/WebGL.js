@@ -11,6 +11,7 @@ const LutPass = require('@superguigui/wagner/src/passes/lookup/lookup');
 // Objects
 import Plane from './objects/Plane';
 import ParticleSystem from './objects/ParticleSystem';
+import RepulstionMesh from './objects/RepulsionMesh';
 
 export default class WebGL {
   constructor(params) {
@@ -26,7 +27,7 @@ export default class WebGL {
     this.mouse = new THREE.Vector2();
     this.originalMouse = new THREE.Vector2();
     this.mouseWorldPosition = new THREE.Vector2(10000, 10000);
-
+    this.tick = 0;
 
     this.raycaster = new THREE.Raycaster();
 
@@ -48,9 +49,6 @@ export default class WebGL {
     if (window.DEBUG || window.DEVMODE) this.initGUI();
 
     this.initPostprocessing();
-
-
-
   }
   initPostprocessing() {
     this.composer = new WAGNER.Composer(this.renderer);
@@ -72,16 +70,16 @@ export default class WebGL {
     this.lutPass.params.uLookup = new THREE.Texture();
     const loader = new THREE.TextureLoader();
     loader.load('./build/assets/lut.jpg', (texture) => {
-          texture.minFilter = texture.magFilter = THREE.LinearFilter;
-          this.lutPass.params.uLookup = texture;
+      texture.minFilter = texture.magFilter = THREE.LinearFilter;
+      this.lutPass.params.uLookup = texture;
     });
 
-    let postprossfolder = this.folder.addFolder('postprocessing');
-    postprossfolder.add(  this.vignettePass.params, 'boost');
-    postprossfolder.add(  this.vignettePass.params, 'reduction');
+    const postprossfolder = this.folder.addFolder('postprocessing');
+    postprossfolder.add(this.vignettePass.params, 'boost');
+    postprossfolder.add(this.vignettePass.params, 'reduction');
 
-    postprossfolder.add(  this.noisePass.params, 'speed');
-    postprossfolder.add(  this.noisePass.params, 'amount');
+    postprossfolder.add(this.noisePass.params, 'speed');
+    postprossfolder.add(this.noisePass.params, 'amount');
 
 
   }
@@ -89,26 +87,33 @@ export default class WebGL {
 
   }
   initObjects() {
-    this.planeRay = new THREE.Mesh(new THREE.PlaneBufferGeometry(400, 200), new THREE.MeshNormalMaterial({ side: THREE.DoubleSide }));
+
+    this.planeRay = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(400, 200),
+    new THREE.MeshNormalMaterial({
+      side: THREE.DoubleSide,
+    }));
     this.planeRay.material.visible = false;
     this.scene.add(this.planeRay);
 
-    let geo = new THREE.SphereGeometry(10, 4, 4);
-    let mat = new THREE.MeshBasicMaterial({
+    const geo = new THREE.SphereGeometry(10, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({
       wireframe: true,
       wireframeLineWidth: 40,
       color: 0x303030,
     });
-    this.sphere = new THREE.Mesh(geo,mat)
+    this.sphere = new THREE.Mesh(geo, mat);
 
-    this.sphere.scale.set(0.2, 0.2, 0.2)
+    this.sphere.scale.set(0.2, 0.2, 0.2);
     this.scene.add(this.sphere);
-    this.plane  = new  Plane();
+    this.plane = new Plane();
+
+    this.damping = 0.1;
     // this.scene.add(this.plane);
 
-
-    this.particleSystem = new ParticleSystem(this.renderer);
+    this.particleSystem = new ParticleSystem(this.renderer, this.repulsionMeshs);
     this.scene.add(this.particleSystem);
+
   }
   initGUI() {
     this.folder = window.gui.addFolder(this.params.name);
@@ -142,11 +147,12 @@ export default class WebGL {
     } else {
       this.renderer.render(this.scene, this.camera);
     }
+    this.tick += 0.05;
+    this.sphere.position.x += (this.mouseWorldPosition.x - this.sphere.position.x) * this.damping;
+    this.sphere.position.y += (this.mouseWorldPosition.y - this.sphere.position.y) * this.damping;
+    this.sphere.position.z += Math.cos(this.tick);
 
-    let damping = 0.1;
-    this.sphere.position.x += (this.mouseWorldPosition.x- this.sphere.position.x  )* damping;
-    this.sphere.position.y += ( this.mouseWorldPosition.y -this.sphere.position.y )* damping;
-
+    // this.repulstionMesh.update(this.sphere.position);
     this.plane.update();
     this.particleSystem.update(this.sphere.position);
 
@@ -156,8 +162,8 @@ export default class WebGL {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObject(this.planeRay, true);
     if (intersects.length > 0) {
-        this.mouseWorldPosition.x = intersects[0].point.x ;
-        this.mouseWorldPosition.y = -intersects[0].point.y;
+      this.mouseWorldPosition.x = intersects[0].point.x;
+      this.mouseWorldPosition.y = -intersects[0].point.y;
     }
   }
   // Events
@@ -187,10 +193,10 @@ export default class WebGL {
     if (!this.params.mouse) return;
     console.log('click');
   }
-  mouseMove(x,y,time) {
+  mouseMove(x, y, time) {
     if (!this.params.mouse) return;
-    let _x = (x / window.innerWidth - 0.5) * 2;
-    let _y = (y / window.innerHeight - 0.5) * 2;
+    const _x = (x / window.innerWidth - 0.5) * 2;
+    const _y = (y / window.innerHeight - 0.5) * 2;
     this.mouse.x = _x;
     this.mouse.y = _y;
 

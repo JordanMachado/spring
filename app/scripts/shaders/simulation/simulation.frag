@@ -20,7 +20,7 @@ void main() {
       vec4 porigin = texture2D(origin, vUv);
       vec3 anchor = porigin.xyz * 1.2;
 
-      float damping = .98;
+      float damping = k;
       // float restLength =  length(anchor-porigin.xyz) + 1.;
 
       vec4 buffer = texture2D(tPositions, vUv);
@@ -33,7 +33,7 @@ void main() {
 
       //
       if(distance(mouse, porigin.xyz)<distanceAtract) {
-        to = vec3( mouse.x - porigin.x,mouse.y - porigin.y,mouse.z - porigin.z  ) * 0.1;
+        to = vec3( mouse.x - porigin.x,mouse.y - porigin.y,mouse.z - porigin.z  ) * 0.01;
         new = buffer.xyz + to;
 
       } else {
@@ -42,7 +42,7 @@ void main() {
         float df = restLength - d;
 
         vec3 acc = vec3(0.0);
-        acc = -1. * normalize(force) * df * k;
+        acc = -1. * normalize(force) * df ;
         new = acc;
         new *= damping;
 

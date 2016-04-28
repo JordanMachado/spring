@@ -11,7 +11,7 @@ window.DEBUG = true;
 let device;
 let webGL;
 
-window.console.warn = function() {};
+window.console.warn = () => {};
 function animate() {
   raf(animate);
   webGL.render();
