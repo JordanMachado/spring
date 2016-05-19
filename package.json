@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run dev",
     "dev": "budo app/scripts/index.js:build/main.js --dir ./public --live --open -- -t babelify -g glslify | node-sass -w app/styles/main.scss -o public/build/",
-    "build": "browserify -t babelify -t stripify -g glslify app/scripts/index.js | uglifyjs -o public/build/main.js"
+    "build": "browserify -t babelify -g glslify app/scripts/index.js | uglifyjs -o public/build/main.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +21,7 @@
     "fast-url-parser": "^1.1.3",
     "glsl-noise": "0.0.0",
     "gsap": "*",
+    "hex-rgb": "^1.0.0",
     "konami-js": "0.0.2",
     "node-sass": "^3.4.2",
     "querystringparser": "^0.1.1",

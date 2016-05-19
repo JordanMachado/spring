@@ -1,4 +1,5 @@
 import THREE from 'three';
+import hexRgb from 'hex-rgb';
 const glslify = require('glslify');
 window.THREE = THREE;
 
@@ -7,26 +8,27 @@ export default class ParticleSystem extends THREE.Object3D {
   constructor(renderer) {
     super();
 
-    const width = 48;
-    const height = 48;
+    const width = 32;
+    const height = 32;
     this.data = new Float32Array(width * height * 4);
-    this.addParticleDiv();
-
-
     const geo = new THREE.SphereGeometry(10, 36, 36);
-    // const geo = new THREE.TorusKnotGeometry(10, 3, 100, 16);
-    // let geo = new THREE.CubeGeometry(10, 36, 36);
-
-
     this.geom = new THREE.Geometry();
     const points = THREE.GeometryUtils.randomPointsInGeometry(geo, this.data.length / 3);
     this.geom = new THREE.BufferGeometry();
 
     const vertices = new Float32Array(width * height * 3);
-
     const uvs = new Float32Array(width * height * 2);
+    const colors = new Float32Array(width * height * 3);
 
     let count = 0;
+
+    this.colors = [
+      '114B5F',
+      '028090',
+      'E4FDE1',
+      '456990',
+      'F45B69',
+    ];
 
     for (let i = 0, l = width * height * 4; i < l; i += 4) {
 
@@ -38,6 +40,12 @@ export default class ParticleSystem extends THREE.Object3D {
       uvs[count * 2 + 0] = (count % width) / width;
       uvs[count * 2 + 1] = Math.floor(count / width) / height;
 
+      const color = hexRgb(this.colors[Math.floor(Math.random() * this.colors.length)]);
+
+      colors[count * 3 + 0] = color[0] / 255;
+      colors[count * 3 + 1] = color[1] / 255;
+      colors[count * 3 + 2] = color[2] / 255;
+
       vertices[count * 3 + 0] = points[count].x;
       vertices[count * 3 + 1] = points[count].y;
       vertices[count * 3 + 2] = points[count].z;
@@ -46,6 +54,7 @@ export default class ParticleSystem extends THREE.Object3D {
     }
     this.geom.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
     this.geom.addAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    this.geom.addAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     this.textureData = new THREE.DataTexture(
       this.data, width, height, THREE.RGBAFormat, THREE.FloatType);
@@ -67,7 +76,9 @@ export default class ParticleSystem extends THREE.Object3D {
     });
 
     this.rtTexturePos2 = this.rtTexturePos.clone();
-
+    this.restLength = 24;
+    this.k = 0.93;
+    this.distanceAttract = 14;
     this.simulationShader = new THREE.ShaderMaterial({
       uniforms: {
         tPositions: {
@@ -80,15 +91,15 @@ export default class ParticleSystem extends THREE.Object3D {
         },
         restLength: {
           type: 'f',
-          value: 24,
+          value: this.restLength,
         },
         k: {
           type: 'f',
-          value: 0.93,
+          value: this.k,
         },
-        distanceAtract: {
+        distanceAttract: {
           type: 'f',
-          value: 14,
+          value: this.distanceAttract,
         },
         mouse: {
           type: 'v3',
@@ -161,23 +172,17 @@ export default class ParticleSystem extends THREE.Object3D {
     this.timer = 0;
 
   }
-  addParticleDiv() {
-    const div = document.createElement('div');
-    div.style.position = 'absolute';
-    div.style.margin = '10px';
-    div.style.fontFamily = 'Helvetica';
-    div.style.zIndex = '2';
-    div.style.color = 'white';
-    // div.innerHTML = 'particles count: '+this.data.length / 3;
-    document.body.appendChild(div);
-    console.log('particles count: ', this.data.length / 3);
-
-  }
   addGUI(folder) {
-    this.folder = folder.addFolder('particles');
-    this.folder.add(this.simulationShader.uniforms.restLength, 'value').min(1).max(100);
-    this.folder.add(this.simulationShader.uniforms.k, 'value').min(0.10).max(1);
-    this.folder.add(this.simulationShader.uniforms.distanceAtract, 'value').min(5).max(50);
+    this.folder = folder.addFolder('Particles');
+    this.folder.add(this, 'restLength').min(1).max(100).onChange(() => {
+      this.simulationShader.uniforms.restLength.value = this.restLength;
+    });
+    this.folder.add(this, 'k').min(0.10).max(1).onChange(() => {
+      this.simulationShader.uniforms.k.value = this.k;
+    });
+    this.folder.add(this, 'distanceAttract').min(5).max(50).onChange(() => {
+      this.simulationShader.uniforms.distanceAttract.value = this.distanceAttract;
+    });
     this.folder.open();
   }
   update(mouse) {
@@ -185,7 +190,6 @@ export default class ParticleSystem extends THREE.Object3D {
     this.timer += 0.01;
     this.simulationShader.uniforms.timer.value = this.timer;
     this.simulationShader.uniforms.mouse.value = mouse;
-    // this.simulationShader.uniforms.otPositions.value = this.fboParticles.in;
 
     const tmp = this.fboParticles.in;
     this.fboParticles.in = this.fboParticles.out;
@@ -193,12 +197,8 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.simulationShader.uniforms.tPositions.value = this.fboParticles.in;
 
-
     this.fboParticles.simulate(this.fboParticles.out);
-    // this.simulationShader.uniforms.otPositions.value = this.fboParticles.out;
-
     this.uniforms.map.value = this.fboParticles.out;
-    this.uniforms.oldmap.value = this.fboParticles.in;
 
   }
 }

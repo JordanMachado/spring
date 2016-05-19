@@ -22,11 +22,12 @@ export default class WebGL {
       keyboard: params.keyboard || false,
       mouse: params.mouse || false,
       touch: params.touch || false,
+      clearColor: params.clearColor || '#456990',
     };
 
     this.mouse = new THREE.Vector2();
     this.originalMouse = new THREE.Vector2();
-    this.mouseWorldPosition = new THREE.Vector2(10000, 10000);
+    this.mouseWorldPosition = new THREE.Vector2(1000, 1000);
     this.tick = 0;
 
     this.raycaster = new THREE.Raycaster();
@@ -38,48 +39,49 @@ export default class WebGL {
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(params.size.width, params.size.height);
-    // this.renderer.setClearColor(0xeeeeee);
-    this.renderer.setClearColor(0x472ed3);
-
+    this.renderer.setClearColor(this.params.clearColor);
 
     this.composer = null;
     this.initLights();
     this.initObjects();
+    this.initPostprocessing();
+
 
     if (window.DEBUG || window.DEVMODE) this.initGUI();
 
-    this.initPostprocessing();
   }
   initPostprocessing() {
     this.composer = new WAGNER.Composer(this.renderer);
     this.composer.setSize(window.innerWidth, window.innerHeight);
     window.composer = this.composer;
+    this.passes = [];
 
     // Passes
     this.fxaaPass = new FXAAPass();
-    this.vignettePass = new VignettePass({});
+    this.passes.push(this.fxaaPass);
 
-    this.vignettePass.params.boost = 1.12;
+    this.vignettePass = new VignettePass({});
+    this.vignettePass.params.boost = 1.15;
     this.vignettePass.params.reduction = 0.9;
+    this.passes.push(this.vignettePass);
 
     this.noisePass = new NoisePass({});
-    this.noisePass.params.speed = 0.4;
-    this.noisePass.params.amount = 0.10;
+    this.noisePass.params.speed = 0.2;
+    this.noisePass.params.amount = 0.03;
+    this.passes.push(this.noisePass);
 
     this.lutPass = new LutPass({});
-    this.lutPass.params.uLookup = new THREE.Texture();
     const loader = new THREE.TextureLoader();
     loader.load('./build/assets/lut.jpg', (texture) => {
       texture.minFilter = texture.magFilter = THREE.LinearFilter;
       this.lutPass.params.uLookup = texture;
     });
+    this.passes.push(this.lutPass);
 
-    const postprossfolder = this.folder.addFolder('postprocessing');
-    postprossfolder.add(this.vignettePass.params, 'boost');
-    postprossfolder.add(this.vignettePass.params, 'reduction');
-
-    postprossfolder.add(this.noisePass.params, 'speed');
-    postprossfolder.add(this.noisePass.params, 'amount');
+    for (let i = 0; i < this.passes.length; i++) {
+      const pass = this.passes[i];
+      pass.enabled = true;
+    }
 
 
   }
@@ -99,17 +101,17 @@ export default class WebGL {
     const geo = new THREE.SphereGeometry(10, 4, 4);
     const mat = new THREE.MeshBasicMaterial({
       wireframe: true,
-      wireframeLineWidth: 40,
-      color: 0x303030,
+      color: 0xc3c3c3,
     });
+
     this.sphere = new THREE.Mesh(geo, mat);
 
-    this.sphere.scale.set(0.2, 0.2, 0.2);
+    const scale = 0.2;
+    this.sphere.scale.set(scale, scale, scale);
     this.scene.add(this.sphere);
     this.plane = new Plane();
 
     this.damping = 0.1;
-    // this.scene.add(this.plane);
 
     this.particleSystem = new ParticleSystem(this.renderer, this.repulsionMeshs);
     this.scene.add(this.particleSystem);
@@ -121,6 +123,31 @@ export default class WebGL {
     this.folder.add(this.params, 'keyboard');
     this.folder.add(this.params, 'mouse');
     this.folder.add(this.params, 'touch');
+    this.folder.addColor(this.params, 'clearColor').onChange((value) => {
+      this.renderer.setClearColor(value);
+    });
+
+    this.postProcessingFolder = this.folder.addFolder('PostProcessing');
+    for (let i = 0; i < this.passes.length; i++) {
+      const pass = this.passes[i];
+      let containsNumber = false;
+      for (const key of Object.keys(pass.params)) {
+        if (typeof pass.params[key] === 'number') {
+          containsNumber = true;
+        }
+      }
+      const folder = this.postProcessingFolder.addFolder(pass.constructor.name);
+      folder.add(pass, 'enabled');
+      if (containsNumber) {
+        for (const key of Object.keys(pass.params)) {
+          if (typeof pass.params[key] === 'number') {
+            folder.add(pass.params, key);
+          }
+        }
+      }
+      folder.open();
+    }
+    this.postProcessingFolder.open();
 
     // init child GUI
     for (let i = 0; i < this.scene.children.length; i++) {
@@ -137,11 +164,11 @@ export default class WebGL {
       this.composer.render(this.scene, this.camera);
 
       // Passes
-      this.composer.pass(this.fxaaPass);
-      this.composer.pass(this.vignettePass);
-      this.composer.pass(this.noisePass);
-      this.composer.pass(this.lutPass);
-
+      for (let i = 0; i < this.passes.length; i++) {
+        if (this.passes[i].enabled) {
+          this.composer.pass(this.passes[i]);
+        }
+      }
       this.composer.toScreen();
 
     } else {
@@ -179,19 +206,15 @@ export default class WebGL {
   }
   keyPress() {
     if (!this.params.keyboard) return;
-    console.log('keyPress');
   }
   keyDown() {
     if (!this.params.keyboard) return;
-    console.log('keyDown');
   }
   keyUp() {
     if (!this.params.keyboard) return;
-    console.log('keyUp');
   }
   click() {
     if (!this.params.mouse) return;
-    console.log('click');
   }
   mouseMove(x, y, time) {
     if (!this.params.mouse) return;
@@ -202,17 +225,26 @@ export default class WebGL {
 
     this.rayCast();
   }
-  touchStart() {
+  touchStart(touches) {
     if (!this.params.touch) return;
-    console.log('touchstart');
+    const _x = (touches[0].clientX / window.innerWidth - 0.5) * 2;
+    const _y = (touches[0].clientY / window.innerHeight - 0.5) * 2;
+    this.mouse.x = _x;
+    this.mouse.y = _y;
+    this.rayCast();
   }
   touchEnd() {
     if (!this.params.touch) return;
-    console.log('touchend');
   }
-  touchMove() {
+  touchMove(touches) {
     if (!this.params.touch) return;
-    console.log('touchmove');
+
+    const _x = (touches[0].clientX / window.innerWidth - 0.5) * 2;
+    const _y = (touches[0].clientY / window.innerHeight - 0.5) * 2;
+    this.mouse.x = _x;
+    this.mouse.y = _y;
+    this.rayCast();
+
   }
 
 }

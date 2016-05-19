@@ -7,11 +7,12 @@ import dat from 'dat-gui';
 import 'gsap';
 
 // Vars
-window.DEBUG = true;
+window.DEBUG = false;
 let device;
 let webGL;
 
-window.console.warn = () => {};
+console.warn = () => {};
+
 function animate() {
   raf(animate);
   webGL.render();
@@ -50,7 +51,8 @@ function touchMove(e) {
 }
 
 domReady(() => {
-  if (!window.VIPMODE && !window.DEBUG) return;
+  // if (!window.VIPMODE && !window.DEBUG) return;
+
   device = deviceType(navigator.userAgent);
   document.querySelector('html').classList.add(device);
 
@@ -60,16 +62,22 @@ domReady(() => {
   // WebGL
   webGL = new WebGL({
     device,
-    name: 'EXPERIMENT',
+    name: 'SPRING',
     postProcessing: true,
     size: {
       width: window.innerWidth,
       height: window.innerHeight,
     },
     keyboard: false,
-    mouse: true,
+    mouse: (device === 'desktop') ? true : false,
+    touch: (device === 'desktop') ? false : true,
   });
   document.body.appendChild(webGL.renderer.domElement);
+
+  TweenMax.to(document.querySelector('canvas'), 3.5, {
+    autoAlpha: 1,
+    ease: Quad.easeOut,
+  });
 
   // Events
   window.addEventListener('resize', resize);
