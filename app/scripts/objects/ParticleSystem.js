@@ -77,7 +77,7 @@ export default class ParticleSystem extends THREE.Object3D {
 
     this.rtTexturePos2 = this.rtTexturePos.clone();
     this.restLength = 24;
-    this.k = 0.93;
+    this.k = 0.97;
     this.distanceAttract = 14;
     this.simulationShader = new THREE.ShaderMaterial({
       uniforms: {
