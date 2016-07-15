@@ -1,7 +1,10 @@
-threejs-starter
+Gégoire Cortesi
 ===================
+First test of spring equation with fbo
 
-WIP
+Demo available [here](http://jojo.ninja/spring/).
+
+![Alt text](http://jojo.ninja/share/spring.png "spring")
 
 
 
@@ -25,4 +28,4 @@ npm run build
 
 You are good to go !
 
-Fork of [threejs-starter-kit] (https://github.com/vdaguenet/threejs-starter-kit)
+
