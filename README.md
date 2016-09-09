@@ -1,4 +1,4 @@
-Gégoire Cortesi
+Spring
 ===================
 First test of spring equation with fbo
 
